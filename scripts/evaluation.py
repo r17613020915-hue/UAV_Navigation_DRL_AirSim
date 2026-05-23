@@ -9,18 +9,25 @@ import numpy as np
 from stable_baselines3 import TD3, PPO
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import BaseCallback
+from attack import *
 
 env = gym.make('airsim-env-v0')
 
-model_path = r'C:\Users\helei\Documents\GitHub\UAV_Navigation_DRL_AirSim\logs\2022_03_03_23_26__no_cnn_fixed_wing_test\models\pure_rl_td3_2d_no_cnn_fixed_wing_test.zip'
+#model_path = r'C:\Users\helei\Documents\GitHub\UAV_Navigation_DRL_AirSim\logs\2022_03_03_23_26__no_cnn_fixed_wing_test\models\pure_rl_td3_2d_no_cnn_fixed_wing_test.zip'
+model_path =r'D:\aRLAA\UAV_Navigation_DRL_AirSim\logs\SimpleAvoid\2025_11_11_22_50_Multirotor_CNN_GAP_SAC\models\model_sb3.zip'
 model = TD3.load(model_path)
 
 env.model = model
 
 obs = env.reset()
 
+
+
 while True:
+    #env.attack_params = attack_params
     action = model.predict(obs)
     obs, rewards, done, info = env.step(action[0])
     if done:
         obs = env.reset()
+
+

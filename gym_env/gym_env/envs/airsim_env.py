@@ -27,6 +27,7 @@ class AirsimGymEnv(gym.Env, QtCore.QThread):
     pose_signal = pyqtSignal(np.ndarray, np.ndarray, np.ndarray, np.ndarray)
     lgmd_signal = pyqtSignal(float, float, np.ndarray)
 
+
     def __init__(self) -> None:
         super().__init__()
         np.set_printoptions(formatter={'float': '{: 4.2f}'.format},
@@ -36,6 +37,8 @@ class AirsimGymEnv(gym.Env, QtCore.QThread):
         self.model = None
         self.data_path = None
         self.lgmd = None
+
+
 
     def set_config(self, cfg):
         """get config from .ini file
@@ -336,23 +339,36 @@ class AirsimGymEnv(gym.Env, QtCore.QThread):
         image_with_state = image_with_state.swapaxes(0, 2)
         image_with_state = image_with_state.swapaxes(0, 1)
 
+
         return image_with_state
+
+
+
+
 
     def get_depth_gray_image(self):
         # get depth and rgb image
         # scene vision image in png format
-        responses = self.client.simGetImages([
-            airsim.ImageRequest("0", airsim.ImageType.DepthVis, True),
-            airsim.ImageRequest("0", airsim.ImageType.Scene, False, False),
-        ])
+        max_retries = 10
+        retry_count = 0
+        while retry_count < max_retries:
+            try:
+                responses = self.client.simGetImages([
+                    airsim.ImageRequest("0", airsim.ImageType.DepthVis, True),
+                    airsim.ImageRequest("0", airsim.ImageType.Scene, False, False),
+                ])
+            except Exception as e:
+                print(f"get_image_fail (RPCError): {e}, retry {retry_count + 1}/{max_retries}")
+                retry_count += 1
+                continue
 
-        # check observation
-        while responses[0].width == 0:
-            print("get_image_fail...")
-            responses = self.client.simGetImages([
-                airsim.ImageRequest("0", airsim.ImageType.DepthVis, True),
-                airsim.ImageRequest("0", airsim.ImageType.Scene, False, False),
-            ])
+            if responses[0].width != 0:
+                break
+            print(f"get_image_fail (width==0), retry {retry_count + 1}/{max_retries}")
+            retry_count += 1
+
+        if retry_count >= max_retries:
+            raise RuntimeError("get_depth_gray_image: failed to get valid image after max retries")
 
         # get depth image
         depth_img = airsim.list_to_2d_float_array(
@@ -372,16 +388,25 @@ class AirsimGymEnv(gym.Env, QtCore.QThread):
         return depth_meter, img_gray
 
     def get_depth_image(self):
+        max_retries = 10
+        retry_count = 0
+        while retry_count < max_retries:
+            try:
+                responses = self.client.simGetImages([
+                    airsim.ImageRequest("0", airsim.ImageType.DepthVis, True)
+                ])
+            except Exception as e:
+                print(f"get_image_fail (RPCError): {e}, retry {retry_count + 1}/{max_retries}")
+                retry_count += 1
+                continue
 
-        responses = self.client.simGetImages([
-            airsim.ImageRequest("0", airsim.ImageType.DepthVis, True)
-        ])
+            if responses[0].width != 0:
+                break
+            print(f"get_image_fail (width==0), retry {retry_count + 1}/{max_retries}")
+            retry_count += 1
 
-        # check observation
-        while responses[0].width == 0:
-            print("get_image_fail...")
-            responses = self.client.simGetImages(
-                airsim.ImageRequest("0", airsim.ImageType.DepthVis, True))
+        if retry_count >= max_retries:
+            raise RuntimeError("get_depth_image: failed to get valid image after max retries")
 
         depth_img = airsim.list_to_2d_float_array(
             responses[0].image_data_float, responses[0].width,
@@ -520,23 +545,24 @@ class AirsimGymEnv(gym.Env, QtCore.QThread):
 
     def compute_reward_final(self, done, action):
         reward = 0
-        reward_reach = 10
-        reward_crash = -20
-        reward_outside = -10
-        
+        reward_reach = 50       # 到达目标的大奖励
+        reward_crash = -20      # 碰撞惩罚
+        reward_outside = -10    # 出界惩罚
+
+        # ============ 改进1: 增大距离奖励系数 ============
         if self.env_name == 'NH_center':
             distance_reward_coef = 500
         else:
-            distance_reward_coef = 50
+            distance_reward_coef = 100  # 增大距离奖励（从50改为100）
 
         if not done:
-            # 1 - goal reward
+            # 1 - 距离奖励（核心奖励）
             distance_now = self.get_distance_to_goal_3d()
             reward_distance = distance_reward_coef * (self.previous_distance_from_des_point - distance_now) / \
-                self.dynamic_model.goal_distance   # normalized to 100 according to goal_distance
+                self.dynamic_model.goal_distance
             self.previous_distance_from_des_point = distance_now
 
-            # 2 - Position punishment
+            # ============ 改进2: 减少位置惩罚（鼓励探索） ============
             current_pose = self.dynamic_model.get_position()
             goal_pose = self.dynamic_model.goal_position
             x = current_pose[0]
@@ -546,42 +572,66 @@ class AirsimGymEnv(gym.Env, QtCore.QThread):
             y_g = goal_pose[1]
             z_g = goal_pose[2]
 
-            punishment_xy = np.clip(self.getDis(
-                x, y, 0, 0, x_g, y_g) / 10, 0, 1)
+            # 大幅降低位置惩罚，从/10改为/30，减少对绕路的惩罚
+            punishment_xy = np.clip(self.getDis(x, y, 0, 0, x_g, y_g) / 30, 0, 1)
             punishment_z = 0.5 * np.clip((z - z_g)/5, 0, 1)
-
             punishment_pose = punishment_xy + punishment_z
 
-            if self.min_distance_to_obstacles < 10:
-                punishment_obs = 1 - np.clip((self.min_distance_to_obstacles - self.crash_distance) / 5, 0, 1)
+            # 3 - 障碍物惩罚（保持合理）
+            if self.min_distance_to_obstacles < self.crash_distance + 8.0:
+                punishment_obs = 1.0 * (1 - (self.min_distance_to_obstacles - self.crash_distance) / 5.0)
+                punishment_obs = np.clip(punishment_obs, 0, 1) ** 2
             else:
                 punishment_obs = 0
 
+            # 4 - 动作惩罚（适当降低）
             punishment_action = 0
-
-            # add yaw_rate cost
-            yaw_speed_cost = abs(action[-1]) / self.dynamic_model.yaw_rate_max_rad
+            yaw_speed_cost = 0.2 * (abs(action[-1]) / self.dynamic_model.yaw_rate_max_rad)  # 从0.3降到0.2
 
             if self.dynamic_model.navigation_3d:
-                # add action and z error cost
-                v_z_cost = ((abs(action[1]) / self.dynamic_model.v_z_max)**2)
-                z_err_cost = (
-                    (abs(self.dynamic_model.state_raw[1]) / self.dynamic_model.max_vertical_difference)**2)
+                v_z_cost = 0.2 * (abs(action[1]) / self.dynamic_model.v_z_max)
+                z_err_cost = 0.1 * (abs(self.dynamic_model.state_raw[1]) / self.dynamic_model.max_vertical_difference)
                 punishment_action += (v_z_cost + z_err_cost)
 
             punishment_action += yaw_speed_cost
 
+            # ============ 改进3: 降低航向误差惩罚（解决转圈问题的关键） ============
             yaw_error = self.dynamic_model.state_raw[2]
-            yaw_error_cost = abs(yaw_error / 90)
+            # 从0.3降到0.05，减少对航向的强制约束
+            yaw_error_cost = 0.05 * abs(yaw_error / 90)
 
-            reward = reward_distance - 0.1 * punishment_pose - 0.2 * \
-                punishment_obs - 0.1 * punishment_action - 0.5 * yaw_error_cost
+            # ============ 改进4: 添加速度奖励（鼓励前进） ============
+            # 当无人机朝向目标方向前进时给予额外奖励
+            v_xy = self.dynamic_model.v_xy
+            
+            # 计算速度在目标方向上的投影
+            dx = x_g - x
+            dy = y_g - y
+            dist_to_goal = math.sqrt(dx*dx + dy*dy) + 1e-6  # 避免除零
+            
+            # 速度在目标方向上的分量（归一化）
+            speed_toward_goal = (v_xy * (dx/dist_to_goal * math.cos(self.dynamic_model.yaw) + 
+                                         dy/dist_to_goal * math.sin(self.dynamic_model.yaw)))
+            
+            # 当速度朝向目标时给正奖励，否则给小额惩罚
+            speed_reward = 0.5 * max(0, speed_toward_goal)  # 只奖励前进，惩罚后退
+
+            # ============ 改进5: 添加Progress奖励（基于前进距离） ============
+            # 额外奖励那些在目标方向上取得进展的步骤
+            progress_reward = 0
+            if reward_distance > 0:  # 如果距离减小
+                progress_reward = 10 * reward_distance / distance_reward_coef  # 放大正向进展
+
+            # 综合奖励（增大正向奖励，减少负向惩罚）
+            reward = reward_distance + progress_reward + speed_reward \
+                     - 0.05 * punishment_pose - 0.3 * punishment_obs \
+                     - 0.1 * punishment_action - 0.05 * yaw_error_cost 
         else:
             if self.is_in_desired_pose():
                 reward = reward_reach
-            if self.is_crashed():
+            elif self.is_crashed():
                 reward = reward_crash
-            if self.is_not_inside_workspace():
+            elif self.is_not_inside_workspace():
                 reward = reward_outside
 
         return reward

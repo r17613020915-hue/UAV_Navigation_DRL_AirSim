@@ -38,7 +38,7 @@ Trained policy can be deployed in the real world directly!!!
   - Add gym_env as envrionment, include MultirotorSimple, Multirotor and FixedwingSimple dynamics
   - Add train with plot
   - Add SimpleAvoid UE4 environment
- 
+
 ## Paper
 
 If you find this project useful in your research, please consider citing the following paper:
@@ -85,34 +85,29 @@ If you find this project useful in your research, please consider citing the fol
    1. `cd gym_env`
    2. `pip install msgpack msgpack-rpc-python`
    3. `pip install -e .`
-
 3. Install customized stable-baselines3
 
    1. `cd stable-baselines3`
    2. `pip install -e .`
    3. If you find the following error, please find the solution [here](https://stackoverflow.com/questions/77124879/pip-extras-require-must-be-a-dictionary-whose-values-are-strings-or-lists-of)
-
 4. Download a AirSim environment, such as [SimpleAvoid](https://drive.google.com/file/d/1QgkZY5-GXRr93QTV-s2d2OCoVSndADAM/view?usp=sharing).
-
 5. If you want to train in other environments please download AirSim released environments from [here](https://github.com/microsoft/AirSim/releases/tag/v1.6.0-windows) and run it.
+
    - Note the current version is v1.6.0 for Windows, maybe it will be updated to higher version someday.
    - If you get a directX runtime problem, please download and install it [here](https://www.microsoft.com/en-us/download/details.aspx?id=35).
    - You can use `Alt+Enter` to exit the full-screen mode for the first time.
    - You should copy the `settings.json` at the bottom of README to your `/Document/AirSim/settings.json`.
-
 6. Install other python packages
 
    ```bash
    pip install wandb pyqtgraph seaborn keyboard tensorboard tqdm
    ```
-
 7. Start training
 
    1. `cd UAV_Navigation_DRL_AirSim`
    2. `python scripts/start_train_with_plot.py`
    3. If you find it's quite slow to get data, please set `ClockSpeed` in `your path to Documents\Airsim\settings.json` over than 1 (such as 10) to speed up the training process.
    4. You log and trained model will be saved to the `log` folder.
-
 8. Evaluation
 
    1. `cd UAV_Navigation_DRL_AirSim`

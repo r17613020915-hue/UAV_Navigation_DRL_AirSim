@@ -3,7 +3,7 @@
   "SettingsVersion": 1.2,
   "SimMode": "ComputerVision",
   "ViewMode": "NoDisplay",
-  "ClockSpeed": 1,
+  "ClockSpeed": 10,
   "SubWindows": [
     {"WindowID": 0, "CameraID": 0, "ImageType": 0, "Visible": true},
     {"WindowID": 1, "CameraID": 0, "ImageType": 3, "Visible": false},

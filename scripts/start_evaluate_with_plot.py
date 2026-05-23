@@ -5,6 +5,7 @@ from PyQt5 import QtWidgets
 from utils.thread_evaluation import EvaluateThread
 from utils.ui_train import TrainingUi
 from configparser import ConfigParser
+from stable_baselines3 import TD3, PPO
 
 
 def get_parser():
@@ -21,15 +22,16 @@ def get_parser():
 def main():
 
     # set evaluation model path
-    eval_path = r'C:\Users\helei\Documents\GitHub\UAV_Navigation_DRL_AirSim\logs\SimpleAvoid\2022_09_06_15_05_SimpleMultirotor_No_CNN_SAC'
+    #eval_path = r'C:\Users\helei\Documents\GitHub\UAV_Navigation_DRL_AirSim\logs\SimpleAvoid\2022_09_06_15_05_SimpleMultirotor_No_CNN_SAC'
+    eval_path = r'D:\aRLAA\UAV_Navigation_DRL_AirSim\logs\SimpleAvoid\2026_05_22_13_31_Multirotor_No_CNN_SAC_attack-sleepernets'
 
     # select config file and model name
-    config_file = eval_path + '/config/config.ini'
+    config_file = r'D:\aRLAA\UAV_Navigation_DRL_AirSim\logs\SimpleAvoid\2026_05_22_13_31_Multirotor_No_CNN_SAC_attack-sleepernets\config\config.ini'
     # config_file = r"D:\OneDrive - mail.nwpu.edu.cn\Github\PhD-thesis-plot\CH3\3_1_simple_training_and_anaylysis\3_1_4_training_analysis_multi\data\2022_08_30_10_43_SimpleMultirotor_No_CNN_SAC\config\config.ini"
-    model_file = eval_path + '/models/model_sb3.zip'
+    model_file = r'D:\aRLAA\UAV_Navigation_DRL_AirSim\logs\SimpleAvoid\2026_05_22_13_31_Multirotor_No_CNN_SAC_attack-sleepernets\models\model_sb3.zip'
     # config_file = r"C:\Users\helei\Documents\GitHub\UAV_Navigation_DRL_AirSim\configs\config_new.ini"
     # model_file = eval_path + '/models/model_200000.zip'
-    total_eval_episodes = 50
+    total_eval_episodes = 100
 
     # 1. Create the qt thread (is MainThread in fact)
     app = QtWidgets.QApplication(sys.argv)
@@ -60,3 +62,13 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+#  新增攻击相关配置  在模型的config文件里加
+# enable_attack = False  ; 是否启用攻击，true/false
+# attack_type = fgsm    ; 攻击类型: fgsm, pgd, random, none, deepfool, cw, bim, mim，crash（增强版fgsm，离得近加大力度）
+# attack_epsilon = 0.08  ; 扰动强度 epsilon
+# attack_trigger_mode = risk     ; risk / confidence / always /smart /step_interval/random/statistical/smart_q
+#设 risk_distance = crash_distance + risk_margin
+#风险值 risk = (risk_distance - min_dist) / risk_distance（裁剪到 0~1）  min_dist 越小，risk 越接近 1（越危险）
+# attack_confidence_threshold = 0.7  ; 动作置信度阈值 (0-1)，超过此阈值才触发攻击，默认0.7

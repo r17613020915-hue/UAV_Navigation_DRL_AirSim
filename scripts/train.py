@@ -1,5 +1,5 @@
 import gym
-import gym_airsim_multirotor
+#import gym_airsim_multirotor
 import datetime
 import os
 
@@ -17,14 +17,14 @@ from wandb.integration.sb3 import WandbCallback
 
 # wandb.init(project="MR_NH", entity="heleidsn")
 
-HOME_PATH = os.pwd()
+HOME_PATH = os.cwd()
 print(HOME_PATH)
 
 #! ---------------step 0: custom your training process-------------------------
 method = 'pure_rl'      # 1-pure_rl 2-generate_expert_data 3-bc_rl 4-offline_rl
-policy = 'no_cnn'       # 1-cnn_fc 2-cnn_gap 3-no_cnn 4-cnn_mobile
-env_name = 'airsim_city'      # 1-trees  2-cylinder
-algo = 'td3'            # 1-ppo 2-td3
+policy = 'cnn_gap'       # 1-cnn_fc 2-cnn_gap 3-no_cnn 4-cnn_mobile
+env_name = 'SimpleAvoid'      # 1-trees  2-cylinder   原本：airsim_city
+algo = 'ppo'            # 1-ppo 2-td3
 action_num = '2d'       # 2d or 3d
 purpose = 'fixed_wing_test'        # input your training purpose
 
@@ -73,7 +73,7 @@ elif policy == 'cnn_mobile':
     feature_num_cnn = 32
     policy_used = CustomCNN_mobile
 elif policy == 'no_cnn':
-    feature_num_cnn = 25
+    feature_num_cnn = 12
     policy_used = CustomNoCNN
 else:
     print('policy select error')

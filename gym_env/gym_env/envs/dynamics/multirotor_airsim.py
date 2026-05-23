@@ -76,13 +76,15 @@ class MultirotorDynamicsAirsim():
         # reset goal
         self.update_goal_pose()
 
-        # reset start
+        # reset start - 创建一个全新的 pose，不依赖 simGetVehiclePose
+        import airsim
         yaw_noise = self.start_random_angle * np.random.random()
-        # set airsim pose
-        pose = self.client.simGetVehiclePose()
+        
+        # 创建全新的 Pose 对象
+        pose = airsim.Pose()
         pose.position.x_val = self.start_position[0]
         pose.position.y_val = self.start_position[1]
-        pose.position.z_val = - self.start_position[2]
+        pose.position.z_val = -self.start_position[2]  # AirSim NED 坐标系 z 向下
         pose.orientation = airsim.to_quaternion(0, 0, yaw_noise)
         self.client.simSetVehiclePose(pose, True)
 
@@ -90,7 +92,7 @@ class MultirotorDynamicsAirsim():
         self.client.enableApiControl(True)
         self.client.armDisarm(True)
 
-        # take off
+        # take off 
         self.client.moveToZAsync(-self.start_position[2], 2).join()
 
         self.client.simPause(True)

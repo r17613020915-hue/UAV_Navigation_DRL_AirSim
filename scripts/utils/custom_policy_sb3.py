@@ -156,7 +156,9 @@ class CNN_GAP(BaseFeaturesExtractor):
         # transfer state feature from 0~1 to -1~1
         # state_feature = state_feature*2 - 1
 
+
         x = th.cat((cnn_feature, state_feature), dim=1)
+        #print(x.shape)
         self.feature_all = x  # use  to update feature before FC
 
         return x
@@ -434,9 +436,13 @@ class CNN_GAP_new(BaseFeaturesExtractor):
         self.gap_layer = nn.AvgPool2d(kernel_size=(8, 10), stride=1)
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
-        depth_img = observations[:, 0:1, :, :]  # 0-1 0->20m 1->0m
-        # print(th.min(depth_img), th.max(depth_img))
-        # norm image to (-1, 1)
+        depth_img = observations[:, 0:1, :, :]  # 可能是 0-255 uint8 或 0-1 float
+        # 确保输入是 float32 并归一化到 0-1 新加
+        if depth_img.dtype == th.uint8:
+            depth_img = depth_img.float() / 255.0
+        elif depth_img.max() > 1.0:
+            depth_img = depth_img / 255.0
+        # norm image to (-1, 1) 新加结束
         depth_img_norm = (depth_img - 0.5) * 2
         # print(th.min(depth_img_norm), th.max(depth_img_norm))
 

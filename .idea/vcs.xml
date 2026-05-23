@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/UAV_Navigation_DRL_AirSim" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/UAV_Navigation_DRL_AirSim/stable-baselines3" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/stable-baselines3" vcs="Git" />
+  </component>
+</project>

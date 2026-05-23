@@ -23,7 +23,8 @@ def get_parser():
 def main():
     # select your config file here
     # config_file = 'configs/config_SimpleAvoid_SimpleMultirotor.ini'
-    # config_file = 'configs/config_fixedwing.ini'
+    #config_file = 'configs/config_Trees_SimpleMultirotor.ini'
+    #config_file = 'configs/config_NH_center_SimpleMultirotor_3D.ini'
     config_file = 'configs/config_Maze_SimpleMultirotor_2D.ini'
 
     # 1. Create the qt thread
@@ -43,7 +44,23 @@ def main():
     cfg = ConfigParser()
     cfg.read(config_file)
 
+    # 打印训练信息到终端
+    print("=" * 60)
+    print("训练已启动！")
+    print(f"配置文件: {config_file}")
+    print(f"模型保存路径: logs/{cfg.get('options', 'env_name')}/")
+    print("请查看 GUI 窗口查看实时训练曲线")
+    print("=" * 60)
+    sys.stdout.flush()
+
     training_thread.start()
+
+    # 保持终端活跃
+    print("\n[提示] 训练进行中... 你可以:")
+    print("  - 查看 GUI 窗口中的实时训练曲线")
+    print("  - 按 Ctrl+C 停止训练")
+    print("-" * 60)
+    sys.stdout.flush()
 
     sys.exit(app.exec_())
 
